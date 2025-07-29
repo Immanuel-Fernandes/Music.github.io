@@ -1,27 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Soundwave Logo Animation</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soundwave Video Export</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
+      background: #000;
       overflow: hidden;
-      background: #0a0a0a;
-    }
-    canvas {
-      display: block;
     }
     #playBtn {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      padding: 15px 30px;
-      font-size: 20px;
-      background-color: #00aaff;
+      padding: 20px 40px;
+      font-size: 22px;
+      background: #00aaff;
       color: white;
       border: none;
       border-radius: 30px;
@@ -32,51 +28,66 @@
 </head>
 <body>
 
-<button id="playBtn">▶ Play</button>
+<button id="playBtn">🎬 Render 4-min Video</button>
 
+<!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ccapture.js@1.1.0/build/CCapture.all.min.js"></script>
+
 <script>
-let song;
-let logo;
-let fft;
+let song, logo, fft, amp;
 let started = false;
+let capturer;
+let frames = 0;
+const FPS = 60;
+const DURATION_SECONDS = 240;
+const TOTAL_FRAMES = DURATION_SECONDS * FPS;
 
 function preload() {
   soundFormats('mp3');
   song = loadSound('dance.mp3');
-  logo = loadImage('dancer.png'); // circular logo
+  logo = loadImage('dancer.png');
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  createCanvas(1920, 1080);
   imageMode(CENTER);
   fft = new p5.FFT();
+  amp = new p5.Amplitude();
 
-  // Button click handler
+  capturer = new CCapture({
+    format: 'webm',
+    framerate: FPS,
+    verbose: true
+  });
+
   document.getElementById('playBtn').addEventListener('click', () => {
-    userStartAudio(); // Required by some browsers
-    song.play();
-    started = true;
-    document.getElementById('playBtn').style.display = 'none';
+    userStartAudio();
+    if (!song.isPlaying()) {
+      song.play();
+      started = true;
+      capturer.start();
+      document.getElementById('playBtn').style.display = 'none';
+    }
   });
 }
 
 function draw() {
-  background(10);
+  background(0);
   translate(width / 2, height / 2);
 
-  if (started) {
+  if (started && song.isPlaying()) {
     let waveform = fft.waveform();
     noFill();
     strokeWeight(2);
 
     for (let i = 0; i < 5; i++) {
-      let alpha = 255 - i * 40;
-      stroke(0, 150, 255, alpha); // Blue shades
+      stroke(0, 150, 255, 255 - i * 40);
       beginShape();
       for (let angle = 0; angle < TWO_PI; angle += 0.02) {
         let index = floor(map(angle, 0, TWO_PI, 0, waveform.length));
-        let r = 120 + waveform[index] * 100 + i * 10;
+        let r = 200 + waveform[index] * 150 + i * 10;
         let x = r * cos(angle);
         let y = r * sin(angle);
         vertex(x, y);
@@ -84,17 +95,30 @@ function draw() {
       endShape(CLOSE);
     }
 
-    image(logo, 0, 0, 150, 150);
+    let level = amp.getLevel();
+    let bounce = map(level, 0, 0.3, 1, 1.5, true);
+    push();
+    scale(bounce);
+    image(logo, 0, 0, 200, 200);
+    pop();
+
+    // Capture this frame
+    capturer.capture(document.querySelector('canvas'));
+    frames++;
+
+    if (frames >= TOTAL_FRAMES) {
+      console.log("🎉 Done capturing. Saving...");
+      song.stop();
+      capturer.stop();
+      capturer.save();
+      noLoop();
+    }
   } else {
     fill(255);
     textAlign(CENTER, CENTER);
     textSize(24);
-    text("Click Play to Start", 0, 0);
+    text("Click ▶ Render 4-min Video", 0, 0);
   }
-}
-
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
 }
 </script>
 
