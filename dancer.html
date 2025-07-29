@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Soundwave Logo Animation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #0a0a0a;
+    }
+    canvas {
+      display: block;
+    }
+    #playBtn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 15px 30px;
+      font-size: 20px;
+      background-color: #00aaff;
+      color: white;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+
+<button id="playBtn">▶ Play</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+<script>
+let song;
+let logo;
+let fft;
+let started = false;
+
+function preload() {
+  soundFormats('mp3');
+  song = loadSound('dance.mp3');
+  logo = loadImage('dancer.png'); // circular logo
+}
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  imageMode(CENTER);
+  fft = new p5.FFT();
+
+  // Button click handler
+  document.getElementById('playBtn').addEventListener('click', () => {
+    userStartAudio(); // Required by some browsers
+    song.play();
+    started = true;
+    document.getElementById('playBtn').style.display = 'none';
+  });
+}
+
+function draw() {
+  background(10);
+  translate(width / 2, height / 2);
+
+  if (started) {
+    let waveform = fft.waveform();
+    noFill();
+    strokeWeight(2);
+
+    for (let i = 0; i < 5; i++) {
+      let alpha = 255 - i * 40;
+      stroke(0, 150, 255, alpha); // Blue shades
+      beginShape();
+      for (let angle = 0; angle < TWO_PI; angle += 0.02) {
+        let index = floor(map(angle, 0, TWO_PI, 0, waveform.length));
+        let r = 120 + waveform[index] * 100 + i * 10;
+        let x = r * cos(angle);
+        let y = r * sin(angle);
+        vertex(x, y);
+      }
+      endShape(CLOSE);
+    }
+
+    image(logo, 0, 0, 150, 150);
+  } else {
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(24);
+    text("Click Play to Start", 0, 0);
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+
+</body>
+</html>
